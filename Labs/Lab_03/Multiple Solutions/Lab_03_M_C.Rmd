@@ -1,0 +1,182 @@
+---
+title: "Untitled"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+library(ggplot2)
+```
+# Question 1
+
+
+
+
+# Question 2
+## Task 1
+
+
+$$
+\begin{aligned}
+F(x) &= \int_{-\infty}^{x}f(u)du \\
+\\
+                  &= \left\{ 
+											\begin{array}{ll}
+												\frac{1}{2}\exp^{a(x-\mu_{DE})} , x  < \mu_{DE} \\
+												\\
+												1-\frac{1}{2}\exp^{-a(x-\mu_{DE})}, x \geq \mu_{DE}
+											\end{array}
+									    \right. \\
+									\\
+									&= \frac{1}{2} + \frac{1}{2}sgn(x-\mu_{DE})(1-\exp^{-\alpha|x-\mu_{DE}|})
+									\\
+\end{aligned}
+$$
+
+* If $x \geq \mu_{DE}$ :
+
+$$
+\begin{aligned}
+y &= 1 - \frac{1}{2} \exp^{-\alpha(x-\mu_{DE})} \\
+y-1 &= - \frac{1}{2} \exp^{-\alpha(x-\mu_{DE})} \\
+2-2y &= \exp^{-\alpha(x-\mu_{DE})} \\
+\ln{(2-2y)} &= \ln\exp^{-\alpha(x-\mu_{DE})} \\
+\ln{(2-2y)} &= -\alpha(x-\mu_{DE}) \\
+\frac{\ln(2-2y)}{\alpha} &= -x+\mu_{DE} \\
+x &= \mu - \frac{\ln(2-2y)}{\alpha}
+\end{aligned}
+$$
+
+* If $x < \mu_{DE}$ :
+
+$$
+\begin{aligned}
+y &= \frac{1}{2} \exp^{\alpha(x-\mu_{DE})} \\
+2y &= \exp^{\alpha(x-\mu_{DE})} \\
+\ln{(2y)} &= \ln\exp^{\alpha(x-\mu_{DE})} \\
+\ln{(2y)} &= \alpha(x-\mu_{DE}) \\
+\frac{\ln(2y)}{\alpha} &= x-\mu_{DE} \\
+x &= \mu + \frac{\ln(2y)}{\alpha}
+\end{aligned}
+$$
+
+
+$$
+\begin{aligned}
+F^{-1}(y) &= \int_{-\infty}^{y}f(u)du \\
+                  &= \left\{ 
+											\begin{array}{ll}
+												\mu - \frac{\ln(2-2y)}{\alpha} , x  \geq \mu_{DE} \\
+												\\
+												\mu + \frac{\ln(2y)}{\alpha}, x < \mu_{DE}
+											\end{array}
+									    \right. \\
+&= \mu - \frac{1}{2}sgn(x-\mu)ln(1+sgn(x-\mu)-sgn(x-\mu)2y) \\
+&= \mu - \frac{1}{2}sgn(x-\mu)ln(1-2|x-\mu|)
+\end{aligned}
+$$
+
+* Deduction: $P[F_y^{-1}(u) \leq y] = P(u \leq F_{y}(y) = F_u(F_y(y)) = F_y(y),\ U \sim U(0,1), \ \mu_u = \frac{1}{2}$
+
+$$
+\begin{aligned}
+F^{-1}(u) &= \mu_{DE} - \frac{1}{2}sgn(u-\mu_u)ln(1-2|u-\mu_u|) \\
+&= \mu_{DE} - \frac{1}{\alpha}sgn(u-\frac{1}{2})ln(1-|2u-1|)
+\end{aligned}
+$$
+
+```{r}
+set.seed(12345)
+de_distribution = function(m = 0, a = 1){
+  u = runif(1)
+  result = m-(1/a)*sign(u-0.5)*log(1-2*abs(u-0.5))
+  #result = m-sign(u-0.5)*1/a*log(1+sign(u-0.5)-sign(u-0.5)*2*u)
+  return(result)
+}
+
+data_de = c()
+for(i in 1:10000){
+  data_de[i] <- de_distribution()
+}
+
+data_de = as.data.frame(data_de)
+
+ggplot(data = data_de, aes(x = data_de)) + 
+  geom_histogram(bins = 100, color = "blue", fill = "white", aes(y=..density..))+
+  geom_density(colour = "red")+
+  stat_function(fun = dnorm, color = "chartreuse4")+
+  ylab("Density")+
+  scale_x_continuous(breaks = -10:10)+
+  theme_bw()
+```
+
+
+
+## Task 2
+
+
+
+
+```{r}
+
+de_pdf = function(x){
+  (1/2)*exp(-abs(x))
+}
+
+c = (2*sqrt(exp(1))) / (sqrt(2*pi))
+
+ar_method = function(c){
+  x=NA
+  rej_counter = 0
+  while(is.na(x))
+  {
+    y = de_distribution()     # rv Y distributed as G
+    U = runif(1)   # U(0,1)
+    f_y = dnorm(y, mean = 0, sd = 1) # fx(y) density function
+    g_y = de_pdf(y)   # g_y
+    if(U < f_y / (c * g_y))
+    {
+      x=y # set x = y 
+    }
+    else
+    {
+        rej_counter=rej_counter+1
+    }
+  }
+  return(c(y, rej_counter))
+}
+
+ar_data <- data.frame(number = 1, rejections = 1)
+
+for(i in 1:2000){
+  ar_data[i,] <- ar_method(c=c)
+}
+set.seed(12345)
+ar_data$norm = rnorm(2000,0,1)
+
+ggplot(data = ar_data)+
+  geom_histogram(bins = 100, fill = "chartreuse4", aes(x = number), alpha = 0.8)+
+  geom_histogram(aes(x = norm), alpha = 0.2, fill = "red", bins = 100)+
+  ylab("Density")+
+  scale_x_continuous(breaks = -10:10)+
+  theme_bw()
+
+
+```
+
+
+```{r}
+set.seed(12345)
+hist(rnorm(2000,0,1), xlab = "x", ylab = "Density", breaks = 50 )
+```
+
+```{r}
+reject_rate = 1- 2000/(2000+sum(ar_data$rejections))
+reject_rate
+
+exp_reject_rate = 1-1/c
+
+print(paste("The observed rejection rate is: ", round(reject_rate, 5), " and the expected is: ", round(exp_reject_rate,5) , ".",sep=""))
+```
+

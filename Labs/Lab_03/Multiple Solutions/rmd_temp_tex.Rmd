@@ -1,0 +1,45 @@
+---
+title: "rmd_temp_tex"
+author: "Christophoros Spyretos"
+date: "11/18/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The probability density fuction of Y~DE(0,1) is $f_{Y}(x)=\frac{1}{2}exp^{-\mid x \mid}$ 
+
+The propability density function of N~(0,1) is $f_{X}(x)=\frac{1}{\sqrt{2\pi}}exp^{-\frac{x^2}{2}}$
+
+$U\leq \frac{f_{X}(x)}{cf_{Y}(x)}$ and the ratio boundary is between 0 an 1 $0<\frac{f_{X}(x)}{cf_{Y}(x)}\leq1$, thus we have the following.
+
+$$
+\begin{aligned}
+&0<\frac{f_{X}(x)}{cf_{Y}(x)}\leq1 \\
+&0<\frac{f_{X}(x)}{f_{Y}(x)}\leq c
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+&c\geq\frac{f_{X}(x)}{f_{Y}(x)} \\
+&c\geq\frac{\frac{1}{\sqrt{2\pi}}exp^{-\frac{x^2}{2}}}{\frac{1}{2}exp^{-\mid x \mid}} \\
+&c\geq\frac{2}{\sqrt{2\pi}}exp^{\mid x \mid - \frac{x^2}{2}}
+\end{aligned}
+$$
+
+We need to maximise $exp^{\mid x \mid - \frac{x^2}{2}}$.
+
+$g(x)=\mid x\mid - \frac{x^2}{2}$
+
+$g'(x)=1-\frac{2x}{2}=1-x$
+
+$g'(x)=0 \Leftrightarrow 1-x=0 \Leftrightarrow x=1$
+
+$$
+\begin{aligned}
+&c\geq\frac{2}{\sqrt{2\pi}}e^{1-\frac{1}{2}} = \frac{2}{\sqrt{2\pi}}e^{\frac{1}{2}}=\frac{2\sqrt{e}}{\sqrt{2\pi}}\simeq1.315
+\end{aligned}
+$$
