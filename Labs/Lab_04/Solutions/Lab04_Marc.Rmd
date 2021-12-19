@@ -1,0 +1,215 @@
+---
+title: "Computational Statistics (732A90) Lab04"
+author: "Christophoros Spyretos, Marc Braun, Marketos Damigos, Patrick Siegfried Hiemsch & Prakhar"
+date: "`r Sys.Date()`"
+output: pdf_document
+papersize : a4
+---
+
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+## Question 1
+
+### Task 1
+
+```{r}
+library(ggplot2)
+f <- function(x) x^5 * exp(1)^(-x)
+
+### Metropolis-Hastings algorithm with log-normal distribution LN(Xt, 1)
+hm_ln <- function(X0, tmax){
+  f <- function(x) x^5 * exp(1)^(-x)
+  alpha <- function(Xt, Y){
+    return(min(1, f(Y) * (dlnorm(Xt, meanlog=Y)) / (f(Xt) * dlnorm(Y, meanlog=Xt))))
+  }
+  X <- c()
+  X <- append(X, X0)
+  t <- 0
+  while (t < tmax){
+    Y <- rlnorm(1, X[length(X)])
+    U <- runif(1)
+    print(alpha(X[length(X)], Y))
+    if(U < alpha(X[length(X)], Y)){
+      X <- append(X, Y)
+    }
+    else {
+      X <- append(X, X[length(X)])
+    }
+    t <- t + 1
+  }
+  return(X)
+}
+
+### Create Plot
+#plot_data_ln <- data.frame(x = seq(1, 1001), y = hm_ln(1.2, 1000))
+#ggplot(data=plot_data_ln, aes(x, y)) +
+#  geom_point()
+
+#plot_data_ln <- data.frame(x = seq(1, 100001), y = hm_ln(6, 100000))
+#hist(plot_data_ln$y)
+
+#hm_ln(2.5, 100)
+
+#df <- data.frame("x" = 1:20)
+#ggplot(df, aes(x)) +
+#  stat_function(fun=function(x){dlnorm(x, meanlog=6)})
+```
+One can guess that the model does not converge quickly because it oftentimes outputs the same values after one another instead of outputting random numbers. This is especially true for $X$ between $X_{500}$ and $X_{900}$ for a starting value of 1.2.
+
+### Task 2
+
+```{r}
+### Metropolis-Hastings algorithm with log-normal distribution LN(Xt, 1)
+hm_chisq <- function(X0, tmax){
+  f <- function(x) x^5 * exp(1)^(-x)
+  alpha <- function(Xt, Y){
+    return(min(1, f(Y) * dchisq(Xt, df=floor(Y + 1)) / (f(Xt) * dchisq(Y, df=floor(Xt + 1)))))
+  }
+  X <- c()
+  X <- append(X, X0)
+  t <- 0
+  while (t < tmax){
+    Y <- rchisq(1, df=floor(X[length(X)] + 1))
+    U <- runif(1)
+    if(U < alpha(X[length(X)], Y)){
+      X <- append(X, Y)
+    }
+    else {
+      X <- append(X, X[length(X)])
+    }
+    t <- t + 1
+  }
+  return(X)
+}
+
+plot_data_chisq <- data.frame(x = seq(1, 1001), y = hm_chisq(2.3, 1000))
+ggplot(data=plot_data_chisq, aes(x, y)) +
+  geom_point()
+```
+In this case, the function seems to produce random numbers very quickly. This means that the function converges after only a few steps for a starting value of 2.3.
+
+### Task 3
+
+```{r}
+library(coda)
+#f1<-mcmc.list();f2<-mcmc.list();n<-100;k<-10
+#X1<-matrix(rnorm(n*k),ncol=k,nrow=n)
+#X2<-X1+(apply(X1,2,cumsum)*(matrix(rep(1:n,k),ncol=k)^2))
+#for (i in 1:k){f1[[i]]<-as.mcmc(X1[,i]);f2[[i]]<-as.mcmc(X2[,i])}
+
+n <- 100; k <- 10
+f <- hm_chisq
+chains <- matrix(ncol = n, nrow=k)
+for (i in 1:k) {
+  chains[i,] <- f(i, n-1)
+}
+f1<-mcmc.list()
+for (i in 1:k) {
+  f1[[i]] <- as.mcmc(chains[i,])
+}
+print(gelman.diag(f1))
+```
+
+
+```{r}
+### Gelman Rubin Method with arguments n (the lenght of the chain), k (starting points from 1 to k) and f (the function to generate the numbers)
+gelman_rubin <- function(n, k, f){
+  n = n + 1
+  chains <- matrix(ncol = n, nrow=k)
+  for (i in 1:k) {
+    chains[i,] <- f(i, n-1)
+  }
+  row_sums <- sum(chains[])
+  B = n / (k - 1) * sum((rowMeans(chains) - mean(chains))^2)
+  si_sq <- apply(chains, 1, var)
+  W = sum(si_sq) / k
+  Var_est <- (n-1) / n * W + B / n
+  sqrt_R <- sqrt(Var_est / W)
+  return(sqrt_R)
+}
+
+converges <- FALSE
+i <- 1
+while(isFALSE(converges)){
+  if(gelman_rubin(i, 10, hm_chisq) < 1.2) converges <- TRUE
+  else i <- i + 1
+}
+print(paste("the sequence converges for i >", i, ", as the value for sqrt(r) is smaller than 1.2"))
+```
+
+### Task 4
+
+The expected value is defined as $E[X] = \int_0^{\infty}xf(x)dx$ if the function is 0 for $x < 0$ which is true for the given f(x). Therefore, the integral can be estimated by the mean of the samples.
+
+```{r, echo=FALSE}
+est_mean_ln <- mean(hm_ln(1.2, 1000))
+est_mean_chisq <- mean(hm_chisq(1.2, 1000))
+print(paste("The mean for the log-normal distr. is", est_mean_ln))
+print(paste("The mean for the chi squared distr. is", est_mean_chisq))
+```
+
+### Task 5
+
+The expected value of the gamma distribution is $\frac{\alpha}{\beta}$ (source: Mathematical Statistics with Applications, Wackerly et al., 2008)
+With $\alpha = 6$ and $\beta = 1$ the actual expected value is 6. One can see that chi-squared distribution estimate is much closer to the actual value than the log-normal distribution estimate.
+
+
+## Question 2
+
+```{r}
+library(ggplot2)
+load("chemical.RData")
+
+gibbs_sampler <- function(k){
+  n <- 50
+  mu <- matrix(nrow = k, ncol = n)
+  mu[1,] <- rep(0, n)
+  for (i in 2:k){
+    for (j in 1:n){
+      if (j == 1){
+        mu[i,j] <- rnorm(1, (Y[1] + mu[i-1,2])/2, 0.1)
+      }
+      else if (j == n){
+        mu[i,j] <- rnorm(1, (Y[n] + mu[i,n-1])/2, 0.1)
+      }
+      else{
+        mu[i, j] <- rnorm(1, (Y[j] + mu[i-1,j+1])/2, 0.1)
+      }
+    }
+  }
+  return(mu)
+}
+
+mu <- gibbs_sampler(1000)
+plot_data <- data.frame("X" = X, "Y_actual" = Y, "est_mu" = colMeans(mu))
+
+ggplot(data = plot_data) +
+  geom_point(aes(x = X, y = Y_actual), color="grey") +
+  geom_point(aes(x = X, y = est_mu), color="red") +
+  ylab("Y") +
+  theme_classic()
+
+plot_data <- data.frame("X" = 1:nrow(mu), "colfifty" = mu[,50])
+ggplot(plot_data) +
+  geom_line(aes(x = X, y = colfifty))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

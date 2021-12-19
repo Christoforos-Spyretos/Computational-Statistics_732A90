@@ -1,0 +1,145 @@
+---
+title: "Lab 06"
+author: "Marc Braun"
+date: "12/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Task 1
+
+f <- function(x) return(x^2 / exp(1)^x - exp(-(9 * sin(x)) / (x^2 + x + 1)))
+
+# Task 2
+
+crossover <- function(x, y){
+  stopifnot(is.numeric(x), is.numeric(y), length(x) == 1, length(y) == 1)
+  return(mean(c(x, y)))
+}
+
+# Task 3
+
+mutate <- function(x) x^2 %% 30
+
+# Task 4
+
+library(ggplot2)
+
+genetic_optimizer <- function(maxiter, mutprob){
+  # (a)
+  plot <- ggplot(data.frame(x = 0:30), aes(x)) +
+    stat_function(fun = f) +
+    theme_minimal()
+  
+  # (b)
+  X <- seq(0, 30, 5)
+  
+  # (c)
+  Values <- f(X)
+  
+  # (d)
+  for (i in 1:maxiter) {
+    # i.
+    parents <- sample(X, 2)
+    
+    # ii.
+    victim_index <- order(Values)[1]
+    
+    # iii.
+    child <- crossover(parents[1], parents[2])
+    if(1 == rbinom(1, 1, mutprob)) child <- mutate(child)
+    
+    # iv.
+    X[victim_index] <- child
+    Values[victim_index] <- f(child)
+    
+    # v.
+    max_val <- max(Values)
+  }
+  # (e)
+  plot +
+    geom_point(data.frame(x = X, y = Values), mapping=aes(x, y), color="red")
+}
+```
+
+```{r, echo=FALSE}
+library(gridExtra)
+
+maxiter_params <- c(10, 100, 1000)
+mutprob_params <- c(0.1, 0.5, 0.9)
+plot_list = list()
+k_plot <- 1
+
+for (i in maxiter_params) {
+  for (j in mutprob_params) {
+    plot <- genetic_optimizer(maxiter = i, mutprob = j) +
+      ggtitle(paste("maxiter = ", i, ", mutprob = ", j)) +
+      theme(plot.title = element_text(size = 8))
+    
+    plot_list[[k_plot]] <- plot
+    k_plot = k_plot + 1
+  }
+}
+
+grid.arrange(grobs = plot_list, nrow = 3, ncol = 3)
+```
+
+```{r}
+data <- read.csv("physical1.csv")
+library(ggplot2)
+
+plotY <- ggplot() +
+  geom_line(data, mapping=aes(X, Y))
+
+plotZ <- ggplot() +
+  geom_line(data, mapping=aes(X, Z))
+
+grid.arrange(plotY, plotZ, ncol=1)
+
+EM_algorithm <- function(){
+  k <- 0
+  lambda <- 100
+  convergence = FALSE
+  while (isFALSE(convergence) & (k < kmax + 1)) {
+    
+  }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

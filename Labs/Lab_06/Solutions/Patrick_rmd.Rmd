@@ -1,0 +1,135 @@
+---
+title: "Computational Statistics (732A90) Lab06"
+author: "Christophoros Spyretos, Marc Braun, Marketos Damigos, Patrick Siegfried Hiemsch & Prakhar"
+date: "`r Sys.Date()`"
+output: pdf_document
+papersize : a4
+---
+
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+## Question 1
+
+### Part 1 - Exploring the function
+
+In this exercise we want to perform one-dimensional maximization with the help of a genetic algorithm. The function we want to optimize is $f(x)$:
+
+$$
+f(x) = \frac{x^2}{e^x} - 2\exp({-\frac{9\sin(x)}{x^2 + x + 1}})
+$$
+
+The interval, in which we will search for the optimum is $[0,30]$. To get a better overview, we plot the function $f(x)$ over this interval.
+
+
+```{r, echo = FALSE, fig.height=4, fig.width=6, fig.align='center'}
+library(ggplot2)
+
+f <- function(x) {
+  (x^2/exp(x)) - 2*exp(-(9*sin(x))/(x^2 + x + 1))
+}
+
+max <- optim(f, par = 0, lower = 0, upper = 30, control=list(fnscale=-1), method = "L-BFGS-B")
+max_x <- max$par
+max_y <- max$value
+
+x <- seq(0, 30, 0.01)
+
+f_plot <- ggplot(data = data.frame(x = x,
+                                   y = f(x))) +
+  geom_line(aes(x, y)) +
+  geom_segment(aes(x = max_x , y = -Inf, xend = max_x, yend = max_y), color = "red3", linetype = "dashed", size = 0.3) +
+  ggtitle("Plot of f(x)") +
+  ylab("f(x)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+f_plot
+```
+Just from a visual analysis, it is obvious that the function reaches the maximum value in the interval between 0 and 5. The exact value found by optimizing $f(x)$ with the optim-function is `r max_x` marked by the red dashed line in the plot. 
+
+### Part 2 - Genetic Algorithm
+
+To prepare our genetic algorithm, we first implement the two functions to perform crossovers and mutations and then create a seperate function, that depends on the parameters maxiter (number of iterations) and mutprob (probability of mutation in an iteration) and executes the genetic maximization.
+
+```{r}
+crossover <- function(x, y) {
+  return((x+y)/2)
+}
+
+mutate <- function(x) {
+  return(x^2 %% 30)
+}
+```
+
+```{r}
+genetic_optimizer <- function(maxiter, mutprob) {
+  
+  f_plot <- ggplot(data = data.frame(x = x,
+                                     y = f(x))) +
+    geom_line(aes(x, y)) +
+    ylab("f(x)") +
+    theme(plot.title = element_text(hjust = 0.5))
+
+  
+  X <- seq(0, 30, 5)
+  Values <- f(X)
+  
+  max_obj_value <- 0
+  
+  set.seed(12345)
+  
+  for (i in 1:maxiter) {
+    parents <- sample(X, 2, length(X))
+    victim_index <- order(Values)[1]
+    kid <- crossover(parents[1], parents[2])
+    
+    mutate <- runif(1)
+    
+    if (mutate <= mutprob) {
+      kid <- mutate(kid)
+    }
+    
+    X[victim_index] <- kid
+    Values <- f(X)
+    max_obj_value <- max(Values)
+  }
+  
+  f_plot <- f_plot + 
+    geom_point(data = data.frame(X = X,
+                                 Values = Values),
+               aes(X, Values),
+               color = "red3")
+  
+  return(f_plot)
+}
+```
+
+To test the implemented algorithm we test it with different values for the two parameters and plot the results in a grid to get a good overview of the optimization outcomes.
+
+```{r, echo=FALSE}
+library(gridExtra)
+
+maxiter_params <- c(10, 100, 1000)
+mutprob_params <- c(0.1, 0.5, 0.9)
+plot_list = list()
+k_plot <- 1
+
+for (i in maxiter_params) {
+  for (j in mutprob_params) {
+    plot <- genetic_optimizer(maxiter = i, mutprob = j) +
+      ggtitle(paste("maxiter = ", i, ", mutprob = ", j)) +
+      theme(plot.title = element_text(size = 8))
+    
+    plot_list[[k_plot]] <- plot
+    k_plot = k_plot + 1
+  }
+}
+
+grid.arrange(grobs = plot_list, nrow = 3, ncol = 3)
+```
+From the above plot we can see, that not all runs of the algorithm found the global optimum (in relation to the interval $[0,30]$). If a small number of iterations is chosen, the population points marked in red are still very widely distributed. But with increasing iterations, we get better results in general (even with a very low mutation rate of 0.1 the algorithm finds a point close to the global optimum). For the probability of mutation, we can observe that extreme values (0.1/0.9) show worse results than 0.5, where after 100 iterations and also after 1000 iterations the global optimum point is found by the algorithm (all population points have very similar x-value which are close to the optimal x we computed earlier). 
+
+
